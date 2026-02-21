@@ -134,7 +134,7 @@ class QRCodeGeneratorApp:
         self.root.title("QR Code Generator")
         self.root.geometry("620x820")
         self.root.configure(bg=BG_PRIMARY)
-        self.root.resizable(False, False)
+        self.root.minsize(500, 600)  # allow resizing but keep a minimum size
 
         # Scrollable area
         canvas = tk.Canvas(root, bg=BG_PRIMARY, highlightthickness=0)
