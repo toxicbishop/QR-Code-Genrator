@@ -8,7 +8,13 @@ from qrcode.image.styles.moduledrawers import (
     VerticalBarsDrawer,
     HorizontalBarsDrawer
 )
-from qrcode.image.styles.colormasks import SolidFillColorMask
+from qrcode.image.styles.colormasks import (
+    SolidFillColorMask,
+    RadialGradiantColorMask,
+    SquareGradiantColorMask,
+    HorizontalGradiantColorMask,
+    VerticalGradiantColorMask
+)
 
 url = input("Enter the URL or text to generate QR Code: ").strip()
 filename = input("Enter the filename (without extension): ").strip()
@@ -25,6 +31,14 @@ print("3. Rounded")
 print("4. Vertical Bars")
 print("5. Horizontal Bars")
 shape_choice = input("Enter choice (1-5): ").strip()
+
+print("\nChoose Color Style:")
+print("1. Solid Color (default)")
+print("2. Radial Gradient")
+print("3. Square Gradient")
+print("4. Horizontal Gradient")
+print("5. Vertical Gradient")
+color_style_choice = input("Enter choice (1-5): ").strip()
 
 fill_col = fill_col if fill_col else "black"
 back_col = back_col if back_col else "white"
@@ -52,6 +66,18 @@ elif shape_choice == '5':
 else:
     module_drawer = SquareModuleDrawer()
 
+# Map color style choice to the correct color mask
+if color_style_choice == '2':
+    color_mask = RadialGradiantColorMask(back_color=back_rgb, center_color=fill_rgb, edge_color=(0,0,0))
+elif color_style_choice == '3':
+    color_mask = SquareGradiantColorMask(back_color=back_rgb, center_color=fill_rgb, edge_color=(0,0,0))
+elif color_style_choice == '4':
+    color_mask = HorizontalGradiantColorMask(back_color=back_rgb, left_color=fill_rgb, right_color=(0,0,0))
+elif color_style_choice == '5':
+    color_mask = VerticalGradiantColorMask(back_color=back_rgb, top_color=fill_rgb, bottom_color=(0,0,0))
+else:
+    color_mask = SolidFillColorMask(front_color=fill_rgb, back_color=back_rgb)
+
 file_path = f"C:\\Users\\Levono\\Downloads\\{filename}.png"
 
 qr = qrcode.QRCode(box_size=box_size, border=border)
@@ -60,7 +86,7 @@ qr.add_data(url)
 img = qr.make_image(
     image_factory=StyledPilImage,
     module_drawer=module_drawer,
-    color_mask=SolidFillColorMask(front_color=fill_rgb, back_color=back_rgb)
+    color_mask=color_mask
 )
 img.save(file_path)
 
