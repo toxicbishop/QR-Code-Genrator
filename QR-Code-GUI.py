@@ -140,17 +140,33 @@ class QRCodeGeneratorApp:
         canvas = tk.Canvas(root, bg=BG_PRIMARY, highlightthickness=0)
         sb = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
         wrapper = tk.Frame(canvas, bg=BG_PRIMARY)
-        wrapper.bind("<Configure>",
-                     lambda _: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=wrapper, anchor="nw")
+        
+        # Make the wrapper fill the canvas width dynamically
+        wrapper_id = canvas.create_window((0, 0), window=wrapper, anchor="n")
+        
+        # We will pack the body frame inside the wrapper
+        body = tk.Frame(wrapper, bg=BG_PRIMARY)
+        body.pack(fill="both", expand=True)
+        
+        def _on_canvas_configure(event):
+            # Center the wrapper by placing it at width/2
+            canvas.itemconfig(wrapper_id, width=event.width)
+            
+            # If the screen is wide, give it nice margins so it doesn't stretch too far
+            max_width = 700
+            if event.width > max_width:
+                margin = (event.width - max_width) // 2
+                body.pack_configure(padx=margin, pady=16)
+            else:
+                body.pack_configure(padx=20, pady=16)
+
+        canvas.bind("<Configure>", _on_canvas_configure)
+        wrapper.bind("<Configure>", lambda _: canvas.configure(scrollregion=canvas.bbox("all")))
+        
         canvas.configure(yscrollcommand=sb.set)
         canvas.pack(side="left", fill="both", expand=True)
         sb.pack(side="right", fill="y")
-        canvas.bind_all("<MouseWheel>",
-                        lambda e: canvas.yview_scroll(-int(e.delta / 120), "units"))
-
-        body = tk.Frame(wrapper, bg=BG_PRIMARY)
-        body.pack(fill="x", padx=20, pady=16)
+        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(-int(e.delta / 120), "units"))
 
         # ── Title ──
         tk.Label(body, text="QR Code Generator", font=TYPE_H1,
