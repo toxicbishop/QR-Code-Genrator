@@ -52,8 +52,16 @@ pip install -r requirements.txt
 
 ### 4. Run the script
 
+You can generate QR codes using either the **Terminal (CLI)** or the **Graphical User Interface (GUI)**:
+
+**To run the Terminal version:**
 ```bash
-python QR_code_Genrator.py
+python QR-Code-Genrator.py
+```
+
+**To run the GUI version:**
+```bash
+python QR-Code-GUI.py
 ```
 
 ---
