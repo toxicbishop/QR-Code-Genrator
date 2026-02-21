@@ -9,6 +9,8 @@
 - 📋 Accepts any URL or text as input
 - 💾 Lets you name your QR code file
 - 🎨 Customize QR code colors (fill and background)
+- 📐 Adjust the box size and border thickness
+- 🟢 Pick cool shapes for your QR code dots (circles, rounded, bars)
 - 🖼️ Saves output as a `.png` image
 - ⚡ Fast and simple — runs entirely in the terminal
 
@@ -58,13 +60,23 @@ python QR_code_Genrator.py
 
 ## 🛠️ Usage
 
-When you run the script, you will be prompted to enter the URL, filename, and color preferences (you can press Enter to keep the default colors):
+When you run the script, you will be prompted to enter the URL, filename, color preferences, size, border, and shape:
 
 ```
 Enter the URL or text to generate QR Code: https://example.com
 Enter the filename (without extension): my_qrcode
 Enter fill color (default black): blue
 Enter background color (default white): yellow
+Enter box size (1-20, default 10): 15
+Enter border thickness (default 4): 5
+
+Choose QR Code shape:
+1. Square (default)
+2. Circle
+3. Rounded
+4. Vertical Bars
+5. Horizontal Bars
+Enter choice (1-5): 3
 ```
 
 Your QR code will be saved to:
