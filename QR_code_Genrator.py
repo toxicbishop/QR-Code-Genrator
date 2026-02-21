@@ -45,6 +45,10 @@ back_col = back_col if back_col else "white"
 box_size = int(box_size_input) if box_size_input.isdigit() else 10
 border = int(border_input) if border_input.isdigit() else 4
 
+print("\n(Optional) Add a logo to the center of the QR code")
+print("Enter the full exact path to your logo image file (e.g., C:\\Users\\Levono\\Downloads\\logo.png)")
+logo_path = input("Or just press Enter to skip: ").strip()
+
 # Parse colors into RGB tuples required by SolidFillColorMask
 try:
     fill_rgb = ImageColor.getrgb(fill_col)
@@ -80,14 +84,37 @@ else:
 
 file_path = f"C:\\Users\\Levono\\Downloads\\{filename}.png"
 
-qr = qrcode.QRCode(box_size=box_size, border=border)
+# Use HIGH error correction so the QR code can still be read even if a logo covers the center
+qr = qrcode.QRCode(
+    error_correction=qrcode.constants.ERROR_CORRECT_H,
+    box_size=box_size, 
+    border=border
+)
 qr.add_data(url)
 
-img = qr.make_image(
-    image_factory=StyledPilImage,
-    module_drawer=module_drawer,
-    color_mask=color_mask
-)
+# If the user provided a logo path, try embedding it
+try:
+    if logo_path:
+        img = qr.make_image(
+            image_factory=StyledPilImage,
+            module_drawer=module_drawer,
+            color_mask=color_mask,
+            embeded_image_path=logo_path
+        )
+    else:
+        img = qr.make_image(
+            image_factory=StyledPilImage,
+            module_drawer=module_drawer,
+            color_mask=color_mask
+        )
+except Exception as e:
+    print(f"\nWarning: Could not load logo from '{logo_path}'. Error: {e}")
+    print("Generating pure QR code instead without the logo.")
+    img = qr.make_image(
+        image_factory=StyledPilImage,
+        module_drawer=module_drawer,
+        color_mask=color_mask
+    )
 img.save(file_path)
 
 print("QR Code generated and saved to", file_path)
