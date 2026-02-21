@@ -110,4 +110,5 @@ C:\Users\Levono\Downloads\my_qrcode.png
 
 ## 📄 License
 
-This project is open source and free to use.
+This project is licensed under the [MIT License](LICENSE).
+
