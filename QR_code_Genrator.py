@@ -1,7 +1,7 @@
 import qrcode
 url=input("Enter the URL or text to generate QR Code: ").strip()
 filename=input("Enter the filename (without extension): ").strip()
-file_path=f"C:\\Users\\Levono\\Documents\\{filename}.png"
+file_path=f"C:\\Users\\Levono\\Downloads\\{filename}.png"
 
 qr=qrcode.QRCode()
 qr.add_data(url)

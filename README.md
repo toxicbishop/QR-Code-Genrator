@@ -66,7 +66,7 @@ Enter the filename (without extension): my_qrcode
 
 Your QR code will be saved to:
 ```
-C:\Users\Levono\Documents\my_qrcode.png
+C:\Users\Levono\Downloads\my_qrcode.png
 ```
 
 ---
