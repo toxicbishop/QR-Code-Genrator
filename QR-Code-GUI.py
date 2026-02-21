@@ -147,7 +147,7 @@ class QRCodeGeneratorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("QR Code Generator")
-        self.root.geometry("620x880")
+        self.root.state('zoomed')  # Start maximized
         self.root.configure(bg=BG_PRIMARY)
         self.root.minsize(580, 700)
 
