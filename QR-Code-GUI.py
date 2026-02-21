@@ -16,8 +16,9 @@ from qrcode.image.styles.colormasks import (
     VerticalGradiantColorMask
 )
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, colorchooser
 import os
+import subprocess
 
 # ── Design Tokens ────────────────────────────────────────────────
 # Neutral dark palette — no purple, no gradients.
@@ -99,6 +100,17 @@ def _button(parent, text, cmd, primary=False, w=12):
     return btn
 
 
+def _checkbox(parent, text, var):
+    cb = tk.Checkbutton(
+        parent, text=text, variable=var,
+        font=TYPE_CAPTION, fg=TEXT_SECONDARY, bg=parent["bg"],
+        activebackground=parent["bg"], activeforeground=TEXT_PRIMARY,
+        selectcolor=BG_INPUT, relief="flat", bd=0,
+        highlightthickness=0
+    )
+    return cb
+
+
 # ── Section wrapper ──────────────────────────────────────────────
 def _section(parent, title):
     """Returns an inner frame you can pack rows into."""
@@ -115,8 +127,8 @@ def _section(parent, title):
     return inner
 
 
-def _row(parent, label_text, widget, browse_cmd=None):
-    """Label + widget on one row, optional browse button."""
+def _row(parent, label_text, widget, browse_cmd=None, color_cmd=None):
+    """Label + widget on one row, optional browse or color button."""
     row = tk.Frame(parent, bg=BG_CARD)
     row.pack(fill="x", pady=PAD_ROW)
 
@@ -125,6 +137,9 @@ def _row(parent, label_text, widget, browse_cmd=None):
 
     if browse_cmd:
         _button(row, "Browse", browse_cmd, w=8).pack(side="left", padx=(6, 0))
+    
+    if color_cmd:
+        _button(row, "Pick", color_cmd, w=8).pack(side="left", padx=(6, 0))
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -132,9 +147,9 @@ class QRCodeGeneratorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("QR Code Generator")
-        self.root.geometry("620x820")
+        self.root.geometry("620x880")
         self.root.configure(bg=BG_PRIMARY)
-        self.root.minsize(500, 600)  # allow resizing but keep a minimum size
+        self.root.minsize(580, 700)
 
         # Scrollable area
         canvas = tk.Canvas(root, bg=BG_PRIMARY, highlightthickness=0)
@@ -149,11 +164,8 @@ class QRCodeGeneratorApp:
         body.pack(fill="both", expand=True)
         
         def _on_canvas_configure(event):
-            # Center the wrapper by placing it at width/2
             canvas.itemconfig(wrapper_id, width=event.width)
-            
-            # If the screen is wide, give it nice margins so it doesn't stretch too far
-            max_width = 700
+            max_width = 800
             if event.width > max_width:
                 margin = (event.width - max_width) // 2
                 body.pack_configure(padx=margin, pady=16)
@@ -168,10 +180,21 @@ class QRCodeGeneratorApp:
         sb.pack(side="right", fill="y")
         canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(-int(e.delta / 120), "units"))
 
+        # Bind shortcuts
+        self.root.bind("<Return>", lambda e: self._generate())
+        self.root.bind("<Escape>", lambda e: self.root.quit())
+
         # ── Title ──
-        tk.Label(body, text="QR Code Generator", font=TYPE_H1,
-                 fg=TEXT_PRIMARY, bg=BG_PRIMARY).pack(anchor="w")
-        tk.Label(body, text="Generate and customise QR codes.",
+        header_frame = tk.Frame(body, bg=BG_PRIMARY)
+        header_frame.pack(fill="x")
+        tk.Label(header_frame, text="QR Code Generator", font=TYPE_H1,
+                 fg=TEXT_PRIMARY, bg=BG_PRIMARY).pack(side="left")
+        
+        # Shortcuts hint
+        tk.Label(header_frame, text="[Enter] to generate", font=TYPE_CAPTION,
+                 fg=TEXT_SECONDARY, bg=BG_PRIMARY).pack(side="right", pady=(4, 0))
+
+        tk.Label(body, text="Create scannable layouts in seconds.",
                  font=TYPE_CAPTION, fg=TEXT_SECONDARY,
                  bg=BG_PRIMARY).pack(anchor="w", pady=(2, 14))
 
@@ -196,13 +219,15 @@ class QRCodeGeneratorApp:
         _row(sec2, "Fill colour",
              _dropdown(sec2, self.fill_var,
                        ["black", "red", "blue", "green", "orange",
-                        "purple", "darkblue", "darkred", "white"]))
+                        "purple", "darkblue", "darkred", "white"]),
+             color_cmd=lambda: self._pick_color(self.fill_var))
 
         self.bg_var = tk.StringVar(value="white")
         _row(sec2, "Background",
              _dropdown(sec2, self.bg_var,
                        ["white", "lightgray", "yellow", "lightblue",
-                        "lightgreen", "pink", "black"]))
+                        "lightgreen", "pink", "black"]),
+             color_cmd=lambda: self._pick_color(self.bg_var))
 
         self.shape_var = tk.StringVar(value="Square")
         _row(sec2, "Dot shape",
@@ -232,11 +257,17 @@ class QRCodeGeneratorApp:
         _row(sec3, "Centre logo", _entry(sec3, self.logo_var, 26),
              browse_cmd=self._browse_logo)
 
+        # Behavioral checkboxes
+        check_row = tk.Frame(sec3, bg=BG_CARD)
+        check_row.pack(fill="x", pady=(4, 0))
+        self.auto_open_var = tk.BooleanVar(value=True)
+        _checkbox(check_row, "Auto-open after generation", self.auto_open_var).pack(side="left")
+
         # ── Action ──
         btn_area = tk.Frame(body, bg=BG_PRIMARY)
         btn_area.pack(fill="x", pady=(4, 10))
         self.gen_btn = _button(btn_area, "Generate", self._generate,
-                               primary=True, w=20)
+                               primary=True, w=22)
         self.gen_btn.pack()
 
         # ── Preview ──
@@ -244,28 +275,48 @@ class QRCodeGeneratorApp:
                            highlightbackground=BORDER)
         preview.pack(fill="x")
 
-        _label(preview, "Preview", font=TYPE_SECTION,
-               fg=TEXT_SECONDARY).pack(pady=(PAD_SECTION, 4))
+        preview_header = tk.Frame(preview, bg=BG_CARD)
+        preview_header.pack(fill="x", pady=(PAD_SECTION, 4))
+        _label(preview_header, "Preview", font=TYPE_SECTION,
+               fg=TEXT_SECONDARY).pack(padx=PAD_SECTION)
+
         self.img_label = tk.Label(preview, bg=BG_CARD)
         self.img_label.pack(pady=(0, 4))
 
-        self.status_var = tk.StringVar(value="No QR code generated yet.")
+        self.status_var = tk.StringVar(value="Ready")
         self.status_label = tk.Label(preview, textvariable=self.status_var,
                                      font=TYPE_CAPTION, fg=TEXT_SECONDARY,
                                      bg=BG_CARD)
-        self.status_label.pack(pady=(0, PAD_SECTION))
+        self.status_label.pack(pady=(0, PAD_ROW))
+
+        # Result actions
+        self.action_row = tk.Frame(preview, bg=BG_CARD)
+        # Hidden until success
+        self.folder_btn = _button(self.action_row, "Open Folder", self._open_folder, w=15)
+        self.folder_btn.pack(side="left", padx=5)
+        self.last_saved_path = None
 
     # ── Callbacks ────────────────────────────────────────────────
     def _browse_dir(self):
         d = filedialog.askdirectory()
-        if d:
-            self.dir_var.set(d)
+        if d: self.dir_var.set(d)
 
     def _browse_logo(self):
         f = filedialog.askopenfilename(
             filetypes=[("Images", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")])
-        if f:
-            self.logo_var.set(f)
+        if f: self.logo_var.set(f)
+
+    def _pick_color(self, var):
+        color = colorchooser.askcolor(title="Choose Colour")[1]
+        if color: var.set(color)
+
+    def _open_folder(self):
+        if self.last_saved_path:
+            folder = os.path.dirname(self.last_saved_path)
+            if os.name == 'nt':
+                os.startfile(folder)
+            else:
+                subprocess.run(['open' if os.name == 'posix' else 'xdg-open', folder])
 
     def _generate(self):
         url = self.url_var.get().strip()
@@ -281,6 +332,8 @@ class QRCodeGeneratorApp:
 
         # Show working state
         self.gen_btn.config(text="Generating...", state="disabled")
+        self.status_var.set("Working...")
+        self.status_label.config(fg=TEXT_SECONDARY)
         self.root.update_idletasks()
 
         out = os.path.join(dest, f"{name}.png")
@@ -329,28 +382,34 @@ class QRCodeGeneratorApp:
             if logo and os.path.exists(logo):
                 kw["embeded_image_path"] = logo
             elif logo:
-                messagebox.showwarning("File not found",
-                                       f"Logo not found:\n{logo}")
+                messagebox.showwarning("File not found", f"Logo not found:\n{logo}")
 
             img = qr.make_image(**kw)
             img.save(out)
 
             # Success
-            self.status_var.set(f"Saved to {out}")
+            self.last_saved_path = out
+            self.status_var.set(f"Successfully saved!")
             self.status_label.config(fg=GREEN)
+            self.action_row.pack(pady=(0, PAD_SECTION))
 
             preview = Image.open(out)
-            preview.thumbnail((200, 200), Image.Resampling.LANCZOS)
+            preview.thumbnail((240, 240), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(preview)
             self.img_label.config(image=photo)
             self.img_label.image = photo
+
+            if self.auto_open_var.get():
+                if os.name == 'nt':
+                    os.startfile(out)
+                else:
+                    subprocess.run(['open' if os.name == 'posix' else 'xdg-open', out])
 
         except Exception as exc:
             self.status_var.set(f"Error: {exc}")
             self.status_label.config(fg=RED)
 
         finally:
-            # Restore button
             self.gen_btn.config(text="Generate", state="normal")
 
 
@@ -359,3 +418,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     QRCodeGeneratorApp(root)
     root.mainloop()
+
