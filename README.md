@@ -15,7 +15,7 @@
 
 ## 🖼️ Example Output
 
-![Generated QR Code](qr_code.png)
+![Generated QR Code](QR-Code.png)
 
 ---
 
