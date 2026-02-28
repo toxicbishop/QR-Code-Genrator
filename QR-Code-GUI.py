@@ -256,19 +256,77 @@ class QRCodeGeneratorApp:
         num_row = tk.Frame(sec3, bg=BG_CARD)
         num_row.pack(fill="x", pady=PAD_ROW)
         _label(num_row, "Box size").pack(side="left", padx=(0, 6))
-        self.box_var = tk.IntVar(value=10)
+        self.box_var = tk.IntVar(value=12)
         _spinbox(num_row, self.box_var, 1, 40).pack(side="left")
         _label(num_row, "Border").pack(side="left", padx=(20, 6))
         self.border_var = tk.IntVar(value=4)
         _spinbox(num_row, self.border_var, 1, 20).pack(side="left")
 
+        scale_row = tk.Frame(sec3, bg=BG_CARD)
+        scale_row.pack(fill="x", pady=PAD_ROW)
+        _label(scale_row, "Logo Scale").pack(side="left", padx=(0, 6))
+        self.logo_scale_var = tk.DoubleVar(value=0.2)
+        tk.Scale(
+            scale_row, variable=self.logo_scale_var, from_=0.05, to=0.5,
+            resolution=0.01, orient="horizontal", bg=BG_CARD, fg=TEXT_SECONDARY,
+            highlightthickness=0, bd=0, activebackground=ACCENT,
+            troughcolor=BG_INPUT, showvalue=True, font=TYPE_CAPTION
+        ).pack(side="left", fill="x", expand=True, padx=5)
+
+        # Logo Settings
+        logo_sec = _section(body, "Logo Options")
+        
+        self.use_social_var = tk.BooleanVar(value=False)
+        _row(logo_sec, "Add social media icon?", _checkbox(logo_sec, "Yes, include a logo", self.use_social_var))
+
+        self.predefined_logo_var = tk.StringVar(value="None")
+        
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        import sys
+        if hasattr(sys, '_MEIPASS'):
+            base_dir = sys._MEIPASS
+        else:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            
+        self.logos_dir = os.path.join(base_dir, "assets", "logos")
+        self.logo_paths = {}
+        
+        # We'll put the dropdown and refresh in one row
+        logo_row = tk.Frame(logo_sec, bg=BG_CARD)
+        logo_row.pack(fill="x", pady=PAD_ROW)
+        _label(logo_row, "Pick a logo", fg=TEXT_SECONDARY).pack(side="left", padx=(0, 8))
+        
+        self.logo_menu_var = tk.StringVar(value="None")
+        self.logo_om = _dropdown(logo_row, self.logo_menu_var, ["None"])
+        self.logo_om.pack(side="left", fill="x", expand=True)
+        
+        _button(logo_row, "Refresh List", self._refresh_logos, w=12).pack(side="left", padx=(6, 0))
+
         self.logo_var = tk.StringVar()
-        _row(sec3, "Centre logo", _entry(sec3, self.logo_var, 26),
+        _row(logo_sec, "Custom logo file", _entry(logo_sec, self.logo_var, 26),
              browse_cmd=self._browse_logo)
+        
+        self._refresh_logos() # Initialize the list
+
+        # Scaling and removal settings
+        self.remove_bg_var = tk.BooleanVar(value=True)
+        _row(logo_sec, "Remove background", _checkbox(logo_sec, "Intelligently strip logo background", self.remove_bg_var))
+
+        scale_row = tk.Frame(logo_sec, bg=BG_CARD)
+        scale_row.pack(fill="x", pady=PAD_ROW)
+        _label(scale_row, "Logo Scale").pack(side="left", padx=(0, 6))
+        self.logo_scale_var = tk.DoubleVar(value=0.20)
+        tk.Scale(
+            scale_row, variable=self.logo_scale_var, from_=0.05, to=0.5,
+            resolution=0.01, orient="horizontal", bg=BG_CARD, fg=TEXT_SECONDARY,
+            highlightthickness=0, bd=0, activebackground=ACCENT,
+            troughcolor=BG_INPUT, showvalue=True, font=TYPE_CAPTION
+        ).pack(side="left", fill="x", expand=True, padx=5)
 
         # Behavioral checkboxes
         check_row = tk.Frame(sec3, bg=BG_CARD)
         check_row.pack(fill="x", pady=(4, 0))
+        
         self.auto_open_var = tk.BooleanVar(value=True)
         _checkbox(check_row, "Auto-open after generation", self.auto_open_var).pack(side="left")
 
@@ -318,6 +376,27 @@ class QRCodeGeneratorApp:
     def _pick_color(self, var):
         color = colorchooser.askcolor(title="Choose Colour")[1]
         if color: var.set(color)
+
+    def _refresh_logos(self):
+        self.logo_paths = {}
+        options = ["None"]
+        if os.path.exists(self.logos_dir):
+            for f in sorted(os.listdir(self.logos_dir)):
+                if f.lower().endswith(('.png', '.jpg', '.jpeg', '.svg')):
+                    name = os.path.splitext(f)[0]
+                    options.append(name)
+                    self.logo_paths[name] = os.path.join(self.logos_dir, f)
+        
+        # Update the OptionMenu
+        menu = self.logo_om["menu"]
+        menu.delete(0, "end")
+        for string in options:
+            menu.add_command(label=string, 
+                             command=lambda value=string: self.logo_menu_var.set(value))
+        
+        # Set back to none if current selection is gone
+        if self.logo_menu_var.get() not in options:
+            self.logo_menu_var.set("None")
 
     def _open_folder(self):
         if self.last_saved_path:
@@ -376,7 +455,19 @@ class QRCodeGeneratorApp:
         mask = masks.get(self.gradient_var.get(),
                          SolidFillColorMask(front_color=fill_rgb, back_color=bg_rgb))
 
-        logo = self.logo_var.get().strip()
+        logo = None
+        if self.use_social_var.get():
+            # Check dropdown first
+            choice = self.logo_menu_var.get()
+            if choice != "None" and choice in self.logo_paths:
+                logo = self.logo_paths[choice]
+            
+            # Custom entry overrides dropdown if both used
+            custom = self.logo_var.get().strip()
+            if custom:
+                logo = custom
+                
+        temp_logo = None
 
         try:
             qr = qrcode.QRCode(
@@ -388,10 +479,56 @@ class QRCodeGeneratorApp:
 
             kw = dict(image_factory=StyledPilImage,
                       module_drawer=drawer, color_mask=mask)
+            
             if logo and os.path.exists(logo):
-                kw["embeded_image_path"] = logo
+                img_to_process = None
+                if self.remove_bg_var.get():
+                    if not REMBG_AVAILABLE:
+                        messagebox.showwarning("Missing Dependency", "The 'rembg' package is not installed.\nBackground removal will be skipped.")
+                        img_to_process = Image.open(logo)
+                    else:
+                        self.status_var.set("Removing background...")
+                        self.root.update_idletasks()
+                        try:
+                            with open(logo, "rb") as f:
+                                input_data = f.read()
+                            output_data = remove(input_data)
+                            img_to_process = Image.open(io.BytesIO(output_data))
+                        except Exception as e:
+                            messagebox.showerror("Error", f"Failed to remove background:\n{e}")
+                            img_to_process = Image.open(logo)
+                else:
+                    img_to_process = Image.open(logo)
+                        
+                if img_to_process:
+                    # Apply standardized scaling and padding
+                    img_to_process = img_to_process.convert("RGBA")
+                    bbox = img_to_process.getbbox()
+                    if bbox:
+                        img_to_process = img_to_process.crop(bbox)
+                    
+                    w, h = img_to_process.size
+                    size = max(w, h)
+                    
+                    # StyledPilImage expects a square object and usually fills ~30%
+                    # We create a transparent square canvas. Larger canvas = smaller logo.
+                    current_scale = self.logo_scale_var.get()
+                    canvas_size = int(size * (0.3 / current_scale))
+                    if canvas_size <= size: canvas_size = size
+                    
+                    final_logo = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+                    final_logo.paste(img_to_process, ((canvas_size - w) // 2, (canvas_size - h) // 2))
+                    
+                    fd, temp_path = tempfile.mkstemp(suffix=".png")
+                    with os.fdopen(fd, "wb") as f:
+                        final_logo.save(f, format="PNG")
+                    temp_logo = temp_path
+                    kw["embeded_image_path"] = temp_logo
             elif logo:
                 messagebox.showwarning("File not found", f"Logo not found:\n{logo}")
+
+            self.status_var.set("Generating QR code...")
+            self.root.update_idletasks()
 
             img = qr.make_image(**kw)
             img.save(out)
@@ -420,6 +557,11 @@ class QRCodeGeneratorApp:
 
         finally:
             self.gen_btn.config(text="Generate", state="normal")
+            if temp_logo and os.path.exists(temp_logo):
+                try:
+                    os.remove(temp_logo)
+                except Exception:
+                    pass
 
 
 # ═══════════════════════════════════════════════════════════════════
