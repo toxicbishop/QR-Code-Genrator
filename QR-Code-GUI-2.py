@@ -229,9 +229,12 @@ class CustomQRCodeGeneratorApp(ctk.CTk):
         
         row1 = ctk.CTkFrame(sec, fg_color="transparent")
         row1.pack(fill="x", pady=(0, 10))
-        ctk.CTkLabel(row1, text="Pick a social media icon", text_color="gray60", font=ctk.CTkFont(size=12)).pack(side="left")
+        ctk.CTkLabel(row1, text="Pick an icon", text_color="gray60", font=ctk.CTkFont(size=12)).pack(side="left")
+        
         self.logo_om = ctk.CTkOptionMenu(row1, variable=self.logo_menu_var, values=logo_options)
-        self.logo_om.pack(side="right", fill="x", expand=True, padx=(20, 0))
+        self.logo_om.pack(side="left", fill="x", expand=True, padx=(20, 5))
+        
+        ctk.CTkButton(row1, text="Refresh", width=60, fg_color="transparent", border_width=1, text_color=("gray10", "gray90"), command=self.refresh_logos).pack(side="right")
         
         row2 = ctk.CTkFrame(sec, fg_color="transparent")
         row2.pack(fill="x", pady=(0, 10))
@@ -278,6 +281,13 @@ class CustomQRCodeGeneratorApp(ctk.CTk):
                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.svg')):
                     name = os.path.splitext(f)[0]
                     self.logo_paths[name] = os.path.join(self.logos_dir, f)
+                    
+        # Update the OptionMenu if it exists
+        if hasattr(self, 'logo_om'):
+            options = ["None"] + list(self.logo_paths.keys())
+            self.logo_om.configure(values=options)
+            if self.logo_menu_var.get() not in options:
+                self.logo_menu_var.set("None")
 
     def schedule_live_preview(self):
         if self._preview_job:

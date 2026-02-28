@@ -484,7 +484,6 @@ class QRCodeGeneratorApp:
                 img_to_process = None
                 if self.remove_bg_var.get():
                     if not REMBG_AVAILABLE:
-                        messagebox.showwarning("Missing Dependency", "The 'rembg' package is not installed.\nBackground removal will be skipped.")
                         img_to_process = Image.open(logo)
                     else:
                         self.status_var.set("Removing background...")
