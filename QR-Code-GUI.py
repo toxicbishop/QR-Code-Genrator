@@ -19,6 +19,15 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, colorchooser
 import os
 import subprocess
+import tempfile
+import io
+import threading
+
+try:
+    from rembg import remove
+    REMBG_AVAILABLE = True
+except ImportError:
+    REMBG_AVAILABLE = False
 
 # ── Design Tokens ────────────────────────────────────────────────
 # Neutral dark palette — no purple, no gradients.
