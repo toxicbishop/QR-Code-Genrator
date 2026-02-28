@@ -1,10 +1,10 @@
-# 🔳 QR Code Generator
+# QR Code Generator
 
 > A lightweight Python script that instantly converts any URL or text into a scannable QR code image.
 
 ---
 
-## ✨ Features
+## Features
 
 - 📋 Accepts any URL or text as input
 - 💾 Lets you name your QR code file
@@ -16,13 +16,13 @@
 
 ---
 
-## 🖼️ Example **Output**
+## Example **Output**
 
 ![Generated QR Code](QR-Code.png)
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Clone the repository
 
@@ -97,7 +97,7 @@ C:\Users\Levono\Downloads\my_qrcode.png
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 | Package | Purpose |
 |---|---|
@@ -108,7 +108,7 @@ C:\Users\Levono\Downloads\my_qrcode.png
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
 
